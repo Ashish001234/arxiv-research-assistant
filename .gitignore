@@ -1,0 +1,37 @@
+# Project internals
+CLAUDE.md
+.claude/
+PROJECT_NOTES.md
+PRESENTATION_SCRIPT.md
+PRESENTATION_SCRIPT.html
+PRESENTATION_SCRIPT.pdf
+build_script_html.py
+acl2023/
+acl2023.zip
+.git.backup/
+
+# Data (too large for git) — root-level data/ only, NOT backend/data/
+/data/
+*.pkl
+*.bin
+*.npy
+*.jsonl
+
+# Environment
+.env
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Kaggle
+~/.kaggle/

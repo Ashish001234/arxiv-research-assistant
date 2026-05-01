@@ -1,0 +1,83 @@
+query,stage,ms
+transformer attention mechanism,search_bm25_miss,21057.35
+transformer attention mechanism,search_dense_miss,1276.69
+transformer attention mechanism,search_hybrid_miss,1613.74
+transformer attention mechanism,search_hybrid_rerank_miss,1819.04
+BERT pre-training natural language understanding,search_bm25_miss,16183.24
+BERT pre-training natural language understanding,search_dense_miss,256.05
+BERT pre-training natural language understanding,search_hybrid_miss,3774.06
+BERT pre-training natural language understanding,search_hybrid_rerank_miss,3465.6
+generative adversarial networks image synthesis,search_bm25_miss,7855.94
+generative adversarial networks image synthesis,search_dense_miss,656.18
+generative adversarial networks image synthesis,search_hybrid_miss,4803.62
+generative adversarial networks image synthesis,search_hybrid_rerank_miss,2852.56
+reinforcement learning policy gradient,search_bm25_miss,4674.13
+reinforcement learning policy gradient,search_dense_miss,263.59
+reinforcement learning policy gradient,search_hybrid_miss,3255.45
+reinforcement learning policy gradient,search_hybrid_rerank_miss,3235.12
+graph neural networks node classification,search_bm25_miss,11184.62
+graph neural networks node classification,search_dense_miss,249.06
+graph neural networks node classification,search_hybrid_miss,2681.68
+graph neural networks node classification,search_hybrid_rerank_miss,3740.35
+object detection convolutional neural network,search_bm25_miss,5624.8
+object detection convolutional neural network,search_dense_miss,265.44
+object detection convolutional neural network,search_hybrid_miss,2931.45
+object detection convolutional neural network,search_hybrid_rerank_miss,3851.59
+knowledge distillation model compression,search_bm25_miss,4007.47
+knowledge distillation model compression,search_dense_miss,258.86
+knowledge distillation model compression,search_hybrid_miss,3054.21
+knowledge distillation model compression,search_hybrid_rerank_miss,4106.22
+federated learning privacy distributed,search_bm25_miss,2299.19
+federated learning privacy distributed,search_dense_miss,133.63
+federated learning privacy distributed,search_hybrid_miss,2550.22
+federated learning privacy distributed,search_hybrid_rerank_miss,3198.08
+contrastive learning self-supervised representation,search_bm25_miss,2778.54
+contrastive learning self-supervised representation,search_dense_miss,238.08
+contrastive learning self-supervised representation,search_hybrid_miss,2397.87
+contrastive learning self-supervised representation,search_hybrid_rerank_miss,4818.85
+neural machine translation sequence to sequence,search_bm25_miss,4865.48
+neural machine translation sequence to sequence,search_dense_miss,319.71
+neural machine translation sequence to sequence,search_hybrid_miss,6017.12
+neural machine translation sequence to sequence,search_hybrid_rerank_miss,6792.05
+transformer attention mechanism,search_bm25_hit,10.08
+transformer attention mechanism,search_dense_hit,7.27
+transformer attention mechanism,search_hybrid_hit,4.18
+transformer attention mechanism,search_hybrid_rerank_hit,3.32
+BERT pre-training natural language understanding,search_bm25_hit,4.4
+BERT pre-training natural language understanding,search_dense_hit,3.75
+BERT pre-training natural language understanding,search_hybrid_hit,3.04
+BERT pre-training natural language understanding,search_hybrid_rerank_hit,4.64
+generative adversarial networks image synthesis,search_bm25_hit,4.96
+generative adversarial networks image synthesis,search_dense_hit,3.6
+generative adversarial networks image synthesis,search_hybrid_hit,6.35
+generative adversarial networks image synthesis,search_hybrid_rerank_hit,2.59
+reinforcement learning policy gradient,search_bm25_hit,4.49
+reinforcement learning policy gradient,search_dense_hit,3.46
+reinforcement learning policy gradient,search_hybrid_hit,3.94
+reinforcement learning policy gradient,search_hybrid_rerank_hit,3.83
+graph neural networks node classification,search_bm25_hit,3.56
+graph neural networks node classification,search_dense_hit,4.39
+graph neural networks node classification,search_hybrid_hit,2.83
+graph neural networks node classification,search_hybrid_rerank_hit,3.22
+object detection convolutional neural network,search_bm25_hit,4.13
+object detection convolutional neural network,search_dense_hit,3.63
+object detection convolutional neural network,search_hybrid_hit,3.79
+object detection convolutional neural network,search_hybrid_rerank_hit,3.47
+knowledge distillation model compression,search_bm25_hit,4.71
+knowledge distillation model compression,search_dense_hit,4.19
+knowledge distillation model compression,search_hybrid_hit,4.24
+knowledge distillation model compression,search_hybrid_rerank_hit,3.31
+federated learning privacy distributed,search_bm25_hit,4.97
+federated learning privacy distributed,search_dense_hit,4.44
+federated learning privacy distributed,search_hybrid_hit,6.07
+federated learning privacy distributed,search_hybrid_rerank_hit,4.45
+contrastive learning self-supervised representation,search_bm25_hit,3.89
+contrastive learning self-supervised representation,search_dense_hit,5.33
+contrastive learning self-supervised representation,search_hybrid_hit,4.35
+contrastive learning self-supervised representation,search_hybrid_rerank_hit,3.36
+neural machine translation sequence to sequence,search_bm25_hit,3.08
+neural machine translation sequence to sequence,search_dense_hit,5.2
+neural machine translation sequence to sequence,search_hybrid_hit,2.55
+neural machine translation sequence to sequence,search_hybrid_rerank_hit,3.07
+transformer attention mechanism,ask_miss,7768.58
+generative adversarial networks image synthesis,ask_miss,6906.59

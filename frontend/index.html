@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ArXiv RAG — Academic Research Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+/* ─── Design tokens ──────────────────────────────────────────────────── */
+:root {
+  --bg:  #080b10;
+  --bg2: #0e1319;
+  --bg3: #141b24;
+  --border:        rgba(100,180,255,0.12);
+  --border-bright: rgba(100,180,255,0.30);
+  --accent:  #3af0c8;
+  --accent2: #4da6ff;
+  --accent3: #b57bff;
+  --text:  #e8eef8;
+  --text2: #8a9ab8;
+  --text3: #4a5568;
+  --amber: #f5a623;
+  --red:   #ff5f6e;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+
+/* ─── Reset & base ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Grid overlay */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(58,240,200,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(58,240,200,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+body > * { position: relative; z-index: 1; }
+
+/* ─── Nav ────────────────────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 60px;
+  background: rgba(8,11,16,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem;
+  z-index: 100;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-family: var(--sans); font-size: 1.1rem; font-weight: 800;
+  color: var(--text); text-decoration: none;
+}
+.nav-logo-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.nav-links {
+  display: flex; gap: 2rem; list-style: none;
+}
+.nav-links a {
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text2); text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--accent); }
+
+/* ─── Page switcher ──────────────────────────────────────────────────── */
+#page-home    { display: block; }
+#page-results { display: none; }
+
+/* ─── Homepage hero ──────────────────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px 1.5rem 0;
+  text-align: center;
+  gap: 2rem;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.3rem 1rem;
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent);
+}
+.hero-badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+.hero-heading {
+  font-size: clamp(3rem, 7vw, 6rem);
+  font-weight: 800; line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.hero-heading em { font-style: normal; color: var(--accent); }
+.hero-sub {
+  font-family: var(--mono); font-size: 0.85rem;
+  color: var(--text2); letter-spacing: 0.05em;
+  max-width: 520px;
+}
+
+/* ─── Search bar ─────────────────────────────────────────────────────── */
+.search-wrap { width: 100%; max-width: 720px; }
+.mode-toggle {
+  display: flex; gap: 0.5rem;
+  margin-bottom: 0.75rem; justify-content: center;
+}
+.mode-btn {
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.35rem 1rem;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: transparent; color: var(--text2);
+  cursor: pointer; transition: all 0.2s;
+}
+.mode-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(58,240,200,0.07);
+}
+.search-row {
+  display: flex; gap: 0.5rem;
+}
+.search-input {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.85rem 1.2rem;
+  font-family: var(--sans); font-size: 1rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-input::placeholder { color: var(--text3); }
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(58,240,200,0.1);
+}
+.search-btn {
+  padding: 0.85rem 1.8rem;
+  background: var(--accent); color: #080b10;
+  border: none; border-radius: 6px;
+  font-family: var(--sans); font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.search-btn:hover { opacity: 0.88; }
+
+/* Quick chips */
+.chips {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  justify-content: center; margin-top: 1rem;
+}
+.chip {
+  font-family: var(--mono); font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text2); background: transparent;
+  cursor: pointer; transition: all 0.2s;
+}
+.chip:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+  background: rgba(77,166,255,0.07);
+}
+
+/* Stats bar */
+.stats-bar {
+  display: flex; gap: 2.5rem; flex-wrap: wrap; justify-content: center;
+  margin-top: 3rem; padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+.stat {
+  text-align: center;
+}
+.stat-num {
+  font-size: 1.8rem; font-weight: 800;
+  color: var(--accent);
+}
+.stat-label {
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text3); margin-top: 0.2rem;
+}
+
+/* ─── Results page ───────────────────────────────────────────────────── */
+.results-page {
+  padding-top: 60px;
+  min-height: 100vh;
+}
+.results-topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+}
+.results-search-input {
+  flex: 1; min-width: 240px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-family: var(--sans); font-size: 0.9rem;
+  color: var(--text); outline: none;
+  transition: border-color 0.2s;
+}
+.results-search-input:focus { border-color: var(--accent); }
+.method-tabs {
+  display: flex; gap: 0.4rem;
+}
+.method-tab {
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: transparent; color: var(--text2);
+  cursor: pointer; transition: all 0.2s;
+}
+.method-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(58,240,200,0.08);
+}
+.results-count {
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--text3); letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* Layout */
+.results-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 0;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .results-layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky; top: 80px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-right: 1.5rem;
+}
+.sidebar-title {
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 1rem;
+}
+.filter-group { margin-bottom: 1.5rem; }
+.filter-group-label {
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 0.6rem; display: block;
+}
+.filter-checkbox {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-bottom: 0.4rem; cursor: pointer;
+}
+.filter-checkbox input { accent-color: var(--accent); cursor: pointer; }
+.filter-checkbox span {
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--text2);
+}
+.year-range { display: flex; gap: 0.5rem; align-items: center; }
+.year-input {
+  width: 70px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--text); outline: none; text-align: center;
+}
+.year-input:focus { border-color: var(--accent); }
+.year-sep { color: var(--text3); font-size: 0.8rem; }
+.filter-apply-btn {
+  width: 100%; margin-top: 1rem;
+  padding: 0.55rem;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  font-family: var(--mono); font-size: 0.7rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent); cursor: pointer; transition: all 0.2s;
+}
+.filter-apply-btn:hover { background: rgba(58,240,200,0.08); }
+
+/* Main results area */
+.results-main { min-width: 0; }
+
+/* RAG answer panel */
+.rag-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.rag-label {
+  font-family: var(--mono); font-size: 0.67rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 0.75rem;
+}
+.rag-answer {
+  font-size: 0.95rem; line-height: 1.7;
+  color: var(--text);
+}
+.rag-answer .cite {
+  color: var(--accent2);
+  cursor: pointer; font-weight: 700;
+}
+.rag-answer .cite:hover { text-decoration: underline; }
+.rag-loading {
+  display: flex; align-items: center; gap: 0.75rem;
+  color: var(--text2); font-family: var(--mono); font-size: 0.8rem;
+}
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Paper card */
+.paper-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0.75rem;
+  transition: transform 0.15s, border-color 0.15s, border-left 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.paper-card::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--accent);
+  transform: scaleY(0); transition: transform 0.2s;
+  transform-origin: center;
+}
+.paper-card:hover {
+  transform: translateX(2px);
+  border-color: var(--border-bright);
+}
+.paper-card:hover::before { transform: scaleY(1); }
+
+.card-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; margin-bottom: 0.5rem;
+}
+.paper-title {
+  font-size: 1rem; font-weight: 700; line-height: 1.4;
+  color: var(--text);
+}
+.paper-pdf-link {
+  font-family: var(--mono); font-size: 0.67rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent2); text-decoration: none;
+  white-space: nowrap; padding-top: 0.15rem;
+  transition: opacity 0.2s;
+}
+.paper-pdf-link:hover { opacity: 0.75; }
+
+.paper-meta {
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--text2); margin-bottom: 0.75rem;
+  display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;
+}
+.meta-sep { color: var(--text3); }
+.meta-cat {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid rgba(77,166,255,0.3);
+  border-radius: 3px; font-size: 0.65rem;
+  color: var(--accent2);
+  background: rgba(77,166,255,0.08);
+}
+.meta-score {
+  color: var(--amber);
+}
+
+.paper-abstract {
+  font-size: 0.85rem; line-height: 1.65;
+  color: var(--text2); margin-bottom: 0.85rem;
+}
+
+.card-bottom {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 0.5rem;
+}
+.paper-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tag {
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid rgba(181,123,255,0.3);
+  color: var(--accent3);
+  background: rgba(181,123,255,0.08);
+}
+.card-method {
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text3);
+}
+
+/* Rank badge */
+.rank-badge {
+  display: inline-block;
+  font-family: var(--mono); font-size: 0.67rem;
+  color: var(--text3);
+  min-width: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+/* Pagination */
+.pagination {
+  display: flex; gap: 0.4rem; justify-content: center;
+  margin-top: 2rem;
+}
+.page-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono); font-size: 0.75rem;
+  color: var(--text2); cursor: pointer; transition: all 0.2s;
+}
+.page-btn.active {
+  border-color: var(--accent); color: var(--accent);
+  background: rgba(58,240,200,0.08);
+}
+.page-btn:hover:not(.active) { border-color: var(--border-bright); color: var(--text); }
+
+/* Error / empty states */
+.empty-state {
+  text-align: center; padding: 4rem 2rem;
+  color: var(--text3);
+}
+.empty-state-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state p { font-family: var(--mono); font-size: 0.8rem; }
+
+/* Loading skeleton */
+.skeleton-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0.75rem;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0%,100% { opacity: 0.6; } 50% { opacity: 1; }
+}
+.skel-line {
+  background: var(--bg3);
+  border-radius: 3px;
+  margin-bottom: 0.6rem;
+}
+
+/* Back button */
+.back-btn {
+  font-family: var(--mono); font-size: 0.7rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text2); background: none; border: none;
+  cursor: pointer; padding: 0; transition: color 0.2s;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.back-btn:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────────────── -->
+<nav>
+  <a class="nav-logo" href="#" onclick="showHome()">
+    <span class="nav-logo-dot"></span>
+    ArXiv RAG
+  </a>
+  <ul class="nav-links">
+    <li><a href="#" onclick="showHome()">Home</a></li>
+    <li><a href="/docs" target="_blank">API</a></li>
+    <li><a href="https://github.com" target="_blank">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PAGE: HOME                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="page-home">
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      886K+ CS Research Papers
+    </div>
+
+    <h1 class="hero-heading">
+      Find the research<br/>that <em>matters</em>
+    </h1>
+
+    <p class="hero-sub">
+      Hybrid BM25 + dense retrieval · Cross-encoder re-ranking · LLM-generated answers
+    </p>
+
+    <!-- Mode toggle -->
+    <div class="search-wrap">
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="home-mode-search" onclick="setMode('search')">Search</button>
+        <button class="mode-btn" id="home-mode-ask" onclick="setMode('ask')">Ask a Question</button>
+      </div>
+
+      <div class="search-row">
+        <input
+          class="search-input"
+          id="home-search-input"
+          type="text"
+          placeholder="e.g. transformer attention mechanism"
+          onkeydown="if(event.key==='Enter') submitSearch()"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="search-btn" onclick="submitSearch()">Search</button>
+      </div>
+
+      <!-- Quick chips -->
+      <div class="chips">
+        <button class="chip" onclick="quickSearch('Transformers')">Transformers</button>
+        <button class="chip" onclick="quickSearch('Large Language Models')">LLMs</button>
+        <button class="chip" onclick="quickSearch('Computer Vision')">Computer Vision</button>
+        <button class="chip" onclick="quickSearch('Natural Language Processing')">NLP</button>
+        <button class="chip" onclick="quickSearch('Reinforcement Learning')">Reinforcement Learning</button>
+        <button class="chip" onclick="quickSearch('Graph Neural Networks')">Graph Neural Networks</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat">
+        <div class="stat-num" id="stat-papers">886K+</div>
+        <div class="stat-label">CS Papers</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">500K+</div>
+        <div class="stat-label">Authors</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-cats">40</div>
+        <div class="stat-label">CS Categories</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PAGE: RESULTS                                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="page-results">
+  <div class="results-page">
+
+    <!-- Top bar -->
+    <div class="results-topbar">
+      <button class="back-btn" onclick="showHome()">← Back</button>
+      <input
+        class="results-search-input"
+        id="results-search-input"
+        type="text"
+        placeholder="Refine your search…"
+        onkeydown="if(event.key==='Enter') refineSearch()"
+        autocomplete="off"
+      />
+      <div class="method-tabs" id="method-tabs">
+        <button class="method-tab" data-method="bm25"           onclick="switchMethod('bm25')">BM25</button>
+        <button class="method-tab" data-method="dense"          onclick="switchMethod('dense')">Dense</button>
+        <button class="method-tab" data-method="hybrid"         onclick="switchMethod('hybrid')">Hybrid</button>
+        <button class="method-tab active" data-method="hybrid_rerank" onclick="switchMethod('hybrid_rerank')">Hybrid+Reranker</button>
+      </div>
+      <span class="results-count" id="results-count"></span>
+    </div>
+
+    <div class="results-layout">
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-title">Filters</div>
+
+        <div class="filter-group">
+          <span class="filter-group-label">CS Category</span>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.AI" onchange="applyFilters()"> <span>cs.AI — Artificial Intelligence</span></label>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.CL" onchange="applyFilters()"> <span>cs.CL — Computation & Language</span></label>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.CV" onchange="applyFilters()"> <span>cs.CV — Computer Vision</span></label>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.LG" onchange="applyFilters()"> <span>cs.LG — Machine Learning</span></label>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.IR" onchange="applyFilters()"> <span>cs.IR — Information Retrieval</span></label>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.NE" onchange="applyFilters()"> <span>cs.NE — Neural & Evolutionary</span></label>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.RO" onchange="applyFilters()"> <span>cs.RO — Robotics</span></label>
+          <label class="filter-checkbox"><input type="checkbox" value="cs.SE" onchange="applyFilters()"> <span>cs.SE — Software Engineering</span></label>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-group-label">Year Range</span>
+          <div class="year-range">
+            <input class="year-input" id="year-min" type="number" placeholder="2018" min="1991" max="2025" />
+            <span class="year-sep">–</span>
+            <input class="year-input" id="year-max" type="number" placeholder="2025" min="1991" max="2025" />
+          </div>
+        </div>
+
+        <button class="filter-apply-btn" onclick="applyFilters()">Apply Filters</button>
+      </aside>
+
+      <!-- Main -->
+      <main class="results-main" id="results-main">
+        <!-- RAG panel injected here when in ask mode -->
+        <div id="rag-panel-container"></div>
+        <!-- Paper cards injected here -->
+        <div id="paper-cards-container"></div>
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+      </main>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────
+const API = '';  // same origin — FastAPI serves both frontend and API
+let appState = {
+  query: '',
+  mode: 'search',       // 'search' | 'ask'
+  method: 'hybrid_rerank',
+  results: [],
+  ragAnswer: '',
+  ragSources: [],
+  page: 1,
+  perPage: 10,
+  yearMin: null,
+  yearMax: null,
+  category: null,
+};
+
+// ─── Page navigation ──────────────────────────────────────────────────────
+function showHome() {
+  document.getElementById('page-home').style.display = 'block';
+  document.getElementById('page-results').style.display = 'none';
+}
+function showResults() {
+  document.getElementById('page-home').style.display = 'none';
+  document.getElementById('page-results').style.display = 'block';
+}
+
+// ─── Mode ─────────────────────────────────────────────────────────────────
+function setMode(mode) {
+  appState.mode = mode;
+  document.getElementById('home-mode-search').classList.toggle('active', mode === 'search');
+  document.getElementById('home-mode-ask').classList.toggle('active', mode === 'ask');
+  const inp = document.getElementById('home-search-input');
+  inp.placeholder = mode === 'ask'
+    ? 'e.g. What are recent techniques for reducing hallucination in LLMs?'
+    : 'e.g. transformer attention mechanism';
+}
+
+// ─── Search trigger ───────────────────────────────────────────────────────
+function quickSearch(topic) {
+  document.getElementById('home-search-input').value = topic;
+  appState.mode = 'search';
+  submitSearch();
+}
+
+async function submitSearch() {
+  const query = document.getElementById('home-search-input').value.trim();
+  if (!query) return;
+  appState.query = query;
+  appState.page = 1;
+  showResults();
+  document.getElementById('results-search-input').value = query;
+  setActiveMethodTab(appState.method);
+  await fetchResults();
+}
+
+async function refineSearch() {
+  const query = document.getElementById('results-search-input').value.trim();
+  if (!query) return;
+  appState.query = query;
+  appState.page = 1;
+  await fetchResults();
+}
+
+// ─── Method switch ────────────────────────────────────────────────────────
+async function switchMethod(method) {
+  appState.method = method;
+  appState.page = 1;
+  setActiveMethodTab(method);
+  await fetchResults();
+}
+
+function setActiveMethodTab(method) {
+  document.querySelectorAll('.method-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.method === method);
+  });
+}
+
+// ─── Filters ──────────────────────────────────────────────────────────────
+function applyFilters() {
+  // Category — take first checked value
+  const checked = [...document.querySelectorAll('.filter-checkbox input:checked')];
+  appState.category = checked.length ? checked[0].value : null;
+  appState.yearMin = document.getElementById('year-min').value || null;
+  appState.yearMax = document.getElementById('year-max').value || null;
+  appState.page = 1;
+  fetchResults();
+}
+
+// ─── Fetch ────────────────────────────────────────────────────────────────
+function showSkeletons() {
+  const c = document.getElementById('paper-cards-container');
+  c.innerHTML = Array.from({length: 5}, () => `
+    <div class="skeleton-card">
+      <div class="skel-line" style="height:18px;width:70%"></div>
+      <div class="skel-line" style="height:12px;width:50%;margin-top:.5rem"></div>
+      <div class="skel-line" style="height:60px;margin-top:.75rem"></div>
+    </div>
+  `).join('');
+}
+
+async function fetchResults() {
+  const { query, mode, method, page, perPage, category, yearMin, yearMax } = appState;
+
+  // Show skeletons
+  document.getElementById('rag-panel-container').innerHTML = '';
+  showSkeletons();
+  document.getElementById('results-count').textContent = 'Searching…';
+  document.getElementById('pagination').innerHTML = '';
+
+  if (mode === 'ask') {
+    // Show RAG loading panel
+    document.getElementById('rag-panel-container').innerHTML = `
+      <div class="rag-panel">
+        <div class="rag-label">AI-Generated Answer</div>
+        <div class="rag-loading"><div class="spinner"></div>Generating answer…</div>
+      </div>`;
+
+    try {
+      const res = await fetch(`${API}/api/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      appState.results = data.sources || [];
+      appState.ragAnswer = data.answer || '';
+      renderRagPanel(data.answer, data.sources.length);
+      renderCards(appState.results);
+      document.getElementById('results-count').textContent =
+        `Based on ${data.sources.length} papers`;
+    } catch (e) {
+      document.getElementById('rag-panel-container').innerHTML =
+        `<div class="rag-panel" style="border-left-color:var(--red)">
+           <div class="rag-label" style="color:var(--red)">Error</div>
+           <div class="rag-answer">${e.message}</div>
+         </div>`;
+      document.getElementById('paper-cards-container').innerHTML = '';
+    }
+    return;
+  }
+
+  // Search mode
+  const params = new URLSearchParams({
+    q: query,
+    method,
+    top_k: 50,  // fetch more, paginate client-side
+  });
+  if (category) params.set('category', category);
+  if (yearMin)  params.set('year_min', yearMin);
+  if (yearMax)  params.set('year_max', yearMax);
+
+  try {
+    const res = await fetch(`${API}/api/search?${params}`);
+    const data = await res.json();
+    appState.results = data.results || [];
+    renderCards(paginate(appState.results, page, perPage));
+    renderPagination(appState.results.length, page, perPage);
+    document.getElementById('results-count').textContent =
+      `Showing ${Math.min((page-1)*perPage+1, appState.results.length)}–${Math.min(page*perPage, appState.results.length)} of ${appState.results.length} results`;
+  } catch (e) {
+    document.getElementById('paper-cards-container').innerHTML =
+      `<div class="empty-state"><div class="empty-state-icon">⚠</div><p>${e.message}</p></div>`;
+    document.getElementById('results-count').textContent = 'Error';
+  }
+}
+
+// ─── Rendering ────────────────────────────────────────────────────────────
+function paginate(arr, page, perPage) {
+  return arr.slice((page - 1) * perPage, page * perPage);
+}
+
+function renderRagPanel(answer, sourceCount) {
+  // Convert citation markers [1], [2] to clickable spans
+  const html = answer.replace(/\[(\d+)\]/g, (_, n) =>
+    `<span class="cite" onclick="scrollToCard(${n})">[${n}]</span>`
+  );
+  document.getElementById('rag-panel-container').innerHTML = `
+    <div class="rag-panel">
+      <div class="rag-label">AI-Generated Answer · Based on ${sourceCount} papers</div>
+      <div class="rag-answer">${html}</div>
+    </div>`;
+}
+
+function scrollToCard(n) {
+  const card = document.getElementById(`paper-card-${n}`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function renderCards(papers) {
+  if (!papers || !papers.length) {
+    document.getElementById('paper-cards-container').innerHTML =
+      `<div class="empty-state">
+         <div class="empty-state-icon">◎</div>
+         <p>No results found. Try a different query or method.</p>
+       </div>`;
+    return;
+  }
+
+  const html = papers.map((p, i) => {
+    const rank = p.rank || (i + 1);
+    const year = p.year || '—';
+    const cats = (p.categories || []).slice(0, 3);
+    const abstract = p.abstract
+      ? p.abstract.split(' ').slice(0, 40).join(' ') + '…'
+      : '';
+    const tags = extractKeywords(p.title, p.categories);
+    const methodLabel = {
+      bm25: 'BM25',
+      dense: 'Dense',
+      hybrid: 'Hybrid (RRF)',
+      hybrid_rerank: 'Hybrid+Reranker',
+    }[p.method] || p.method;
+
+    return `
+      <div class="paper-card" id="paper-card-${rank}">
+        <div class="card-top">
+          <div class="paper-title">
+            <span class="rank-badge">#${rank}</span>${escHtml(p.title)}
+          </div>
+          <a class="paper-pdf-link" href="${p.url}" target="_blank">PDF ↗</a>
+        </div>
+        <div class="paper-meta">
+          <span>${escHtml(truncateAuthors(p.authors))}</span>
+          <span class="meta-sep">·</span>
+          <span>${year}</span>
+          ${cats.map(c => `<span class="meta-cat">${escHtml(c)}</span>`).join('')}
+          <span class="meta-sep">·</span>
+          <span class="meta-score">Relevance: ${p.score.toFixed(4)}</span>
+        </div>
+        <div class="paper-abstract">${escHtml(abstract)}</div>
+        <div class="card-bottom">
+          <div class="paper-tags">
+            ${tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+          </div>
+          <span class="card-method">Method: ${methodLabel}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('paper-cards-container').innerHTML = html;
+}
+
+function renderPagination(total, page, perPage) {
+  const totalPages = Math.ceil(total / perPage);
+  if (totalPages <= 1) {
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pages.push(
+      `<button class="page-btn ${i === page ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`
+    );
+  }
+  document.getElementById('pagination').innerHTML = pages.join('');
+}
+
+function goPage(page) {
+  appState.page = page;
+  renderCards(paginate(appState.results, page, appState.perPage));
+  renderPagination(appState.results.length, page, appState.perPage);
+  document.getElementById('results-count').textContent =
+    `Showing ${Math.min((page-1)*appState.perPage+1, appState.results.length)}–${Math.min(page*appState.perPage, appState.results.length)} of ${appState.results.length} results`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function truncateAuthors(authors) {
+  if (!authors) return '';
+  // arXiv authors field is a string like "Smith, John and Doe, Jane"
+  const parts = authors.split(' and ');
+  if (parts.length > 3) return parts.slice(0, 3).join(', ') + ' et al.';
+  return parts.join(', ');
+}
+
+function extractKeywords(title, categories) {
+  // Pull meaningful words from title as pseudo-tags
+  const stopwords = new Set(['a','an','the','of','in','on','for','to','and','or','with','via','using','based','from','is','are','this','that','by','as','at','be']);
+  const words = (title || '')
+    .toLowerCase()
+    .replace(/[^a-z\s-]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !stopwords.has(w));
+  const tags = [...new Set(words)].slice(0, 4);
+  return tags;
+}
+
+// ─── Load stats on boot ───────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const res = await fetch(`${API}/api/stats`);
+    const data = await res.json();
+    if (data.total_papers) {
+      document.getElementById('stat-papers').textContent =
+        (data.total_papers / 1000).toFixed(0) + 'K+';
+    }
+    if (data.cs_categories) {
+      document.getElementById('stat-cats').textContent = data.cs_categories;
+    }
+  } catch (_) {
+    // API not available — keep defaults
+  }
+}
+
+loadStats();
+</script>
+</body>
+</html>
